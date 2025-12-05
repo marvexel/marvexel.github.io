@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vuu - Watch</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.3/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .gradient-overlay {
+            background: linear-gradient(180deg, rgba(10,10,10,0) 0%, rgba(10,10,10,0.8) 50%, rgba(10,10,10,1) 100%);
+        }
+
+        .backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60vh;
+            z-index: 0;
+            opacity: 0.15;
+            background-size: cover;
+            background-position: center top;
+            filter: blur(40px);
+        }
+
+        .player-container {
+            background: #000000;
+            border: 1px solid #1a1a1a;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .glass-card {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .source-btn {
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .source-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        .source-btn.active {
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            color: #000000;
+            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+        }
+
+        .episode-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .episode-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        }
+
+        .episode-card.selected {
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+        }
+
+        .season-btn {
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .season-btn.active {
+            background: #ffffff;
+            color: #000000;
+            font-weight: 600;
+        }
+
+        .back-link {
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-link:hover {
+            transform: translateX(-4px);
+        }
+
+        .info-badge {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            letter-spacing: -0.3px;
+        }
+
+        .star-icon {
+            color: #ffd700;
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .premium-badge {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #000000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body x-data="app()" class="relative">
+    <div class="backdrop" :style="`background-image: url(https://image.tmdb.org/t/p/original${content?.backdrop_path})`"></div>
+    
+    <div class="relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <a href="movies.html" class="back-link text-gray-400 hover:text-white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to Browse
+            </a>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12" x-show="content">
+            <div class="mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight" x-text="content?.title || content?.name"></h1>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span x-show="content?.release_date" class="info-badge" x-text="new Date(content.release_date).getFullYear()"></span>
+                    <span x-show="content?.first_air_date" class="info-badge" x-text="new Date(content.first_air_date).getFullYear()"></span>
+                    <span x-show="content?.vote_average" class="info-badge flex items-center gap-1">
+                        <svg class="star-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        <span x-text="content.vote_average.toFixed(1)"></span>
+                    </span>
+                    <span x-show="content?.runtime" class="info-badge" x-text="`${content.runtime} min`"></span>
+                </div>
+            </div>
+
+            <div class="player-container rounded-2xl overflow-hidden mb-8">
+                <div class="relative pt-[56.25%]">
+                    <iframe 
+                        :src="currentVideoUrl" 
+                        class="absolute top-0 left-0 w-full h-full" 
+                        frameborder="0"
+                        allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 mb-6">
+                <h3 class="section-title">Streaming Sources</h3>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="source in availableSources" :key="source.id">
+                        <button 
+                            @click="selectedSource = source.id; updateVideoUrl()" 
+                            class="source-btn px-4 py-2 rounded-lg"
+                            :class="selectedSource === source.id ? 'active' : 'bg-[#1a1a1a] hover:bg-[#242424] text-white'">
+                            <span x-text="source.name"></span>
+                            <span x-show="source.name.includes('premium') || source.name.includes('4K')" class="premium-badge ml-2">PRO</span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <template x-if="isShow">
+                <div class="glass-card rounded-2xl p-6 mb-6">
+                    <h3 class="section-title">Episodes</h3>
+
+                    <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+                        <template x-for="season in seasons" :key="season">
+                            <button 
+                                @click="selectedSeason = season; updateEpisodes()"
+                                class="season-btn px-5 py-2.5 rounded-lg whitespace-nowrap"
+                                :class="selectedSeason === season ? 'active' : 'bg-[#1a1a1a] hover:bg-[#242424] text-white'">
+                                Season <span x-text="season"></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        <template x-for="episode in seasonData?.episodes" :key="episode.episode_number">
+                            <div 
+                                @click="selectedEpisode = episode.episode_number; loadEpisode()"
+                                class="episode-card bg-[#141414] rounded-xl overflow-hidden cursor-pointer"
+                                :class="selectedEpisode === episode.episode_number ? 'selected' : ''">
+                                <div class="relative aspect-video">
+                                    <img 
+                                        :src="episode.still_path 
+                                              ? 'https://image.tmdb.org/t/p/w300' + episode.still_path
+                                              : 'https://via.placeholder.com/300x169/1a1a1a/666666?text=No+Image'"
+                                        class="w-full h-full object-cover"
+                                        :alt="episode.name">
+                                    <div class="absolute inset-0 gradient-overlay"></div>
+                                    <div class="absolute bottom-0 left-0 right-0 p-3">
+                                        <span class="text-xs font-semibold text-white">EP <span x-text="episode.episode_number"></span></span>
+                                    </div>
+                                </div>
+                                <div class="p-3">
+                                    <h4 class="font-medium text-sm line-clamp-2" x-text="episode.name"></h4>
+                                    <p class="text-xs text-gray-400 mt-1" x-show="episode.runtime" x-text="`${episode.runtime} min`"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="section-title">Overview</h3>
+                <p class="text-gray-300 leading-relaxed text-[15px]" x-text="content?.overview"></p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/5">
+                    <div x-show="content?.genres">
+                        <p class="text-gray-500 text-sm mb-2">Genres</p>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="genre in content?.genres" :key="genre.id">
+                                <span class="px-3 py-1 bg-[#1a1a1a] rounded-full text-xs" x-text="genre.name"></span>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="content?.status">
+                        <p class="text-gray-500 text-sm mb-2">Status</p>
+                        <p class="text-white" x-text="content?.status"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+const availableSources = [
+    { id: 'vidsrcXyz', name: 'VidSrc', urls: { movie: 'https://vidsrc.xyz/embed/movie/{id}', tv: 'https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}' } },
+    { id: 'vidsrcrip', name: 'VidSrc Pro', urls: { movie: 'https://vidsrc.rip/embed/movie/{id}', tv: 'https://vidsrc.rip/embed/tv/{id}/{season}/{episode}' } },
+    { id: 'videasy', name: 'VidEasy 4K', urls: { movie: 'https://player.videasy.net/movie/{id}?color=ffffff', tv: 'https://player.videasy.net/tv/{id}/{season}/{episode}?color=ffffff' } },
+    { id: 'vidfast', name: 'VidFast 4K', urls: { movie: 'https://vidfast.pro/movie/{id}', tv: 'https://vidfast.pro/tv/{id}/{season}/{episode}' } },
+    { id: 'embedsu', name: 'EmbedSU', urls: { movie: 'https://embed.su/embed/movie/{id}', tv: 'https://embed.su/embed/tv/{id}/{season}/{episode}' } },
+    { id: 'pstream', name: 'P-Stream', urls: { movie: 'https://iframe.pstream.mov/media/tmdb-movie-{id}', tv: 'https://iframe.pstream.mov/media/tmdb-tv-{id}/{season}/{episode}' } },
+    { id: 'multiembed', name: 'MultiEmbed', urls: { movie: 'https://multiembed.mov/?video_id={id}&tmdb=1', tv: 'https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}' } },
+    { id: 'vidsrcsu', name: 'VidSrc+', urls: { movie: 'https://vidsrc.su/embed/movie/{id}', tv: 'https://vidsrc.su/embed/tv/{id}/{season}/{episode}' } },
+    { id: 'autoembed', name: 'AutoEmbed', urls: { movie: 'https://player.autoembed.cc/embed/movie/{id}', tv: 'https://player.autoembed.cc/embed/tv/{id}/{season}/{episode}' } },
+    { id: 'smashystream', name: 'Smashy', urls: { movie: 'https://player.smashy.stream/movie/{id}', tv: 'https://player.smashy.stream/tv/{id}?s={season}&e={episode}' } }
+];
+
+function app() {
+    return {
+        apiKey: '1070730380f5fee0d87cf0382670b255',
+        content: null,
+        contentId: null,
+        contentType: null,
+        isShow: false,
+        selectedSeason: 1,
+        selectedEpisode: 1,
+        seasons: [],
+        seasonData: null,
+        selectedSource: 'vidsrcXyz',
+        availableSources: availableSources,
+        currentVideoUrl: '',
+
+        async init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            this.contentId = urlParams.get('id');
+            this.contentType = urlParams.get('type');
+            this.isShow = this.contentType === 'tv';
+
+            if (this.contentId && this.contentType) {
+                await this.fetchContent();
+                this.updateVideoUrl();
+            }
+        },
+
+        async fetchContent() {
+            const url = `https://api.themoviedb.org/3/${this.contentType}/${this.contentId}?api_key=${this.apiKey}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                this.content = data;
+
+                if (this.isShow) {
+                    this.seasons = Array.from({ length: data.number_of_seasons }, (_, i) => i + 1);
+                    await this.updateEpisodes();
+                }
+            } catch (error) {
+                console.error('Error fetching content:', error);
+            }
+        },
+
+        async updateEpisodes() {
+            const url = `https://api.themoviedb.org/3/tv/${this.contentId}/season/${this.selectedSeason}?api_key=${this.apiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                this.seasonData = data;
+                this.selectedEpisode = 1;
+                this.updateVideoUrl();
+            } catch (error) {
+                console.error('Error fetching episodes:', error);
+            }
+        },
+
+        loadEpisode() {
+            this.updateVideoUrl();
+        },
+
+        updateVideoUrl() {
+            const source = this.availableSources.find(s => s.id === this.selectedSource);
+            if (!source) return;
+
+            const params = this.isShow
+                ? { id: this.contentId, season: this.selectedSeason, episode: this.selectedEpisode }
+                : { id: this.contentId };
+
+            let url = source.urls[this.isShow ? 'tv' : 'movie'];
+            Object.entries(params).forEach(([key, value]) => {
+                url = url.replace(`{${key}}`, value);
+            });
+            this.currentVideoUrl = url;
+        }
+    }
+}
+    </script>
+</body>
+
+</html>
